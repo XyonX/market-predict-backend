@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+pip-wheel-metadata/
+pip-log.txt
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and test outputs
+*.log
+*.pot
+*.pyc
+*.coverage
+htmlcov/
+.coverage.*
+.cache/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+test-results/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# FastAPI-specific (optional)
+instance/
+*.db
+*.sqlite3
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Uvicorn reload state (sometimes used)
+reload/
+
+# Jupyter
+.ipynb_checkpoints/
