@@ -32,7 +32,6 @@ s3 = boto3.client(
 # Input schema
 class StockRequest(BaseModel):
     symbol: str          # e.g. "AAPL"
-    features: list[float]
 
 def download_model(symbol: str):
     model_path = f"model_cache/{symbol}.keras"
@@ -108,6 +107,37 @@ def predict(data: StockRequest):
     predicted_price_change_ratio = float(prediction[0][0])
     predicted_next_price = last_price_in_window * (1 + predicted_price_change_ratio)
 
+
+    # TODO ADD NEW FIELDS TTO RETURN
+    #  "prediction_date"
+    #  "confidence"
+    #  "model_accuracy"
+    # 
+    # "price_range": {
+    #     "high": 159.8,
+    #     "low": 148.25
+    # },
+    # "metrics": {
+    #     "price_change": 5.75,
+    #     "price_change_percent": 3.77
+    # }
+    # DEMO
+#      Response: {
+#     "ticker": "AAPL",
+#     "current_price": 152.65,
+#     "predicted_price": 158.40,
+#     "prediction_date": "2024-03-22",
+#     "confidence": 87.3,
+#     "model_accuracy": 89.2,
+#     "price_range": {
+#         "high": 159.8,
+#         "low": 148.25
+#     },
+#     "metrics": {
+#         "price_change": 5.75,
+#         "price_change_percent": 3.77
+#     }
+# }
 
     return {
         "symbol":data.symbol,
