@@ -32,48 +32,61 @@ class StockRequest(BaseModel):
 
 def download_model(symbol: str):
     model_path = f"model_cache/{symbol}.tflite"
-    os.makedirs("model_cache", exist_ok=True)
-    
     if not os.path.exists(model_path):
         try:
             s3.download_file(R2_BUCKET, f"{symbol}.tflite", model_path)
         except Exception as e:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Model for '{symbol}' not found: {str(e)}"
-            )
+            raise HTTPException(status_code=404, detail=f"Model for '{symbol}' not found.")
     return model_path
 
-def download_data(symbol: str):
-    window_size = 20
-    end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-    start_date = (pd.Timestamp.now() - pd.Timedelta(days=window_size + 10)).strftime('%Y-%m-%d')
-    
+def DownloadData(ticker : str):
+
+    window_size = 20 # This should match the window_size used during training
+
+    end_date_inference = pd.Timestamp.now().strftime('%Y-%m-%d')
+    start_date_inference = (pd.Timestamp.now() - pd.Timedelta(days=window_size + 10)).strftime('%Y-%m-%d') # Fetch a few extra days
     try:
-        # Fetch data (single ticker returns non-multiindex DataFrame)
-        data = yf.download(symbol, start=start_date, end=end_date)
-        
-        if len(data) < window_size:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient data for {symbol}. Only {len(data)} days available."
-            )
-            
-        # Get last 'window_size' closing prices ending yesterday
-        closes = data['Close'].tail(window_size + 1).tolist()
-        return closes[:-1]  # Exclude today's price
-    
+        # Fetch the data
+        inference_data = yf.download(ticker, start=start_date_inference, end=end_date_inference)
+
+        # Access the Close prices and get the last 'window_size' values
+        # Ensure there are enough data points
+        if len(inference_data['Close']) < window_size:
+            print(f"Not enough data points ({len(inference_data)}) to form a window of size {window_size}.")
+            # Exit or handle the error
+            exit()
+
+        # Get the last 'window_size' closing prices
+        raw_inference_window = inference_data['Close'][ticker].tail(window_size).tolist()
+        # raw_inference_window = raw_inference_window[:-1]
+        # Get the 20 closing prices ending **yesterday**, not today
+        # raw_inference_window = inference_data['Close'][ticker].iloc[-(window_size + 1):-1].tolist()
+        # raw_inference_window = inference_data['Close'][ticker].iloc[-window_size-1:-1].tolist()
+
+        # Prepare the inference data in the same format as your training data (normalized)
+        # Apply the same normalization logic as in your make_dataset function
+        if raw_inference_window: # Check if the list is not empty
+            first_price = raw_inference_window[0]
+            inference_window_normalized = [p / first_price for p in raw_inference_window]
+        else:
+            print("Could not get enough data to create an inference window.")
+            exit()
+
+        return raw_inference_window
+        # Convert the normalized window to a NumPy array and reshape for the model
+        # The model expects an input shape like (batch_size, window_size).
+        # For a single prediction, batch_size is 1.
+        # inference_input = np.array(inference_window_normalized).reshape(1, window_size)
+        # return inference_input
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Data download failed: {str(e)}"
-        )
+        print(f"Error during data fetching or prediction: {e}")
 
 @app.post("/predict")
 def predict(request: StockRequest):
     window_size = 20
     model_path = download_model(request.symbol)
-    raw_data = download_data(request.symbol)
+    raw_data = DownloadData(request.symbol)
     
     # Normalize data
     first_price = raw_data[0]

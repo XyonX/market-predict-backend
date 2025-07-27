@@ -6,6 +6,7 @@ sudo apt install docker.io
 /home/ubuntu/deploy/deploy.sh
 
 
+//without env injection
 deploy_stock.sh
 #!/bin/bash
 
@@ -25,3 +26,36 @@ docker rm market-predict || true
 docker run -d --name market-predict -p 8000:8000 market-predict:latest
 
 echo "=== Deployment Complete ✅ ==="
+
+
+//wht env inject
+deploy_stock.sh
+
+#!/bin/bash
+
+#!/bin/bash
+set -e  # Exit immediately if any command fails
+
+# 1. Go to your project directory
+cd /home/ubuntu/market-predict-backend
+
+echo "=== Pulling latest code ==="
+git pull
+
+echo "=== Building Docker image ==="
+docker build -t market-predict:latest .
+
+echo "=== Restarting container ==="
+docker stop market-predict 2>/dev/null || true
+docker rm   market-predict 2>/dev/null || true
+
+echo "=== Starting new container with env injection ==="
+docker run -d \
+  --name market-predict \
+  --env-file /home/ubuntu/market-predict-backend/.env \        # inject all KEY=VALUE pairs
+  -v /home/ubuntu/market-predict-backend/.env:/app/.env:ro \  # optional—so load_dotenv() finds it
+  -p 8000:8000 \
+  market-predict:latest
+
+echo "=== Deployment Complete ✅ ==="
+
