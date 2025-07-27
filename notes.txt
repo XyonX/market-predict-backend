@@ -1,1 +1,27 @@
 .\venv\Scripts\Activate.ps1
+
+sudo apt update
+sudo apt install docker.io
+
+/home/ubuntu/deploy/deploy.sh
+
+
+deploy_stock.sh
+#!/bin/bash
+
+set -e  # Exit immediately if any command fails
+
+cd /home/ubuntu/market-predict-backend
+
+echo "=== Pulling latest code ==="
+git pull
+
+echo "=== Building Docker image ==="
+docker build -t market-predict:latest .
+
+echo "=== Restarting container ==="
+docker stop market-predict || true
+docker rm market-predict || true
+docker run -d --name market-predict -p 8000:8000 market-predict:latest
+
+echo "=== Deployment Complete ✅ ==="
