@@ -33,11 +33,19 @@ s3 = boto3.client(
 class StockRequest(BaseModel):
     symbol: str          # e.g. "AAPL"
 
+# def download_model(symbol: str):
+#     model_path = f"model_cache/{symbol}.keras"
+#     if not os.path.exists(model_path):
+#         try:
+#             s3.download_file(R2_BUCKET, f"{symbol}.keras", model_path)
+#         except Exception as e:
+#             raise HTTPException(status_code=404, detail=f"Model for '{symbol}' not found.")
+#     return model_path
 def download_model(symbol: str):
-    model_path = f"model_cache/{symbol}.keras"
+    model_path = f"model_cache/{symbol}.tflite"  # Change extension
     if not os.path.exists(model_path):
         try:
-            s3.download_file(R2_BUCKET, f"{symbol}.keras", model_path)
+            s3.download_file(R2_BUCKET, f"{symbol}.tflite", model_path)  # Update key
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"Model for '{symbol}' not found.")
     return model_path
@@ -86,62 +94,99 @@ def DownloadData(ticker : str):
     except Exception as e:
         print(f"Error during data fetching or prediction: {e}")
 
+# @app.post("/predict")
+# def predict(data: StockRequest):
+#     window_size = 20
+#     model_path = download_model(data.symbol)
+#     model = tf.keras.models.load_model(model_path)
+#     raw_data= DownloadData(data.symbol)
+#     first_price = raw_data[0]
+#     inference_window_normalized = [p / first_price for p in raw_data]
+#     input_array = np.array(inference_window_normalized).reshape(1, window_size)
+#     # Make a prediction
+#     prediction = model.predict(input_array)
+
+#     print("Prediiction: ",prediction)
+
+#     # last_price_in_window = raw_data[-1]
+#     # predicted_price_change_ratio = prediction[0][0]
+#     # predicted_next_price = last_price_in_window * (1 + predicted_price_change_ratio)
+#     last_price_in_window = float(raw_data[-1])
+#     predicted_price_change_ratio = float(prediction[0][0])
+#     predicted_next_price = last_price_in_window * (1 + predicted_price_change_ratio)
+
+
+#     # TODO ADD NEW FIELDS TTO RETURN
+#     #  "prediction_date"
+#     #  "confidence"
+#     #  "model_accuracy"
+#     # 
+#     # "price_range": {
+#     #     "high": 159.8,
+#     #     "low": 148.25
+#     # },
+#     # "metrics": {
+#     #     "price_change": 5.75,
+#     #     "price_change_percent": 3.77
+#     # }
+#     # DEMO
+# #      Response: {
+# #     "ticker": "AAPL",
+# #     "current_price": 152.65,
+# #     "predicted_price": 158.40,
+# #     "prediction_date": "2024-03-22",
+# #     "confidence": 87.3,
+# #     "model_accuracy": 89.2,
+# #     "price_range": {
+# #         "high": 159.8,
+# #         "low": 148.25
+# #     },
+# #     "metrics": {
+# #         "price_change": 5.75,
+# #         "price_change_percent": 3.77
+# #     }
+# # }
+
+#     return {
+#         "symbol":data.symbol,
+#         "current_price": last_price_in_window,
+#         "predicted_price": predicted_next_price
+#     }
+
+
 @app.post("/predict")
 def predict(data: StockRequest):
     window_size = 20
     model_path = download_model(data.symbol)
-    model = tf.keras.models.load_model(model_path)
-    raw_data= DownloadData(data.symbol)
+    
+    # Initialize TFLite interpreter
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+    
+    # Get input/output details
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    
+    # Prepare input data
+    raw_data = DownloadData(data.symbol)
     first_price = raw_data[0]
     inference_window_normalized = [p / first_price for p in raw_data]
-    input_array = np.array(inference_window_normalized).reshape(1, window_size)
-    # Make a prediction
-    prediction = model.predict(input_array)
-
-    print("Prediiction: ",prediction)
-
-    # last_price_in_window = raw_data[-1]
-    # predicted_price_change_ratio = prediction[0][0]
-    # predicted_next_price = last_price_in_window * (1 + predicted_price_change_ratio)
+    input_array = np.array(inference_window_normalized, dtype=np.float32).reshape(1, window_size)
+    
+    # Set input tensor and invoke
+    interpreter.set_tensor(input_details[0]['index'], input_array)
+    interpreter.invoke()
+    
+    # Get prediction
+    prediction = interpreter.get_tensor(output_details[0]['index'])
+    
+    # Process results
     last_price_in_window = float(raw_data[-1])
     predicted_price_change_ratio = float(prediction[0][0])
     predicted_next_price = last_price_in_window * (1 + predicted_price_change_ratio)
-
-
-    # TODO ADD NEW FIELDS TTO RETURN
-    #  "prediction_date"
-    #  "confidence"
-    #  "model_accuracy"
-    # 
-    # "price_range": {
-    #     "high": 159.8,
-    #     "low": 148.25
-    # },
-    # "metrics": {
-    #     "price_change": 5.75,
-    #     "price_change_percent": 3.77
-    # }
-    # DEMO
-#      Response: {
-#     "ticker": "AAPL",
-#     "current_price": 152.65,
-#     "predicted_price": 158.40,
-#     "prediction_date": "2024-03-22",
-#     "confidence": 87.3,
-#     "model_accuracy": 89.2,
-#     "price_range": {
-#         "high": 159.8,
-#         "low": 148.25
-#     },
-#     "metrics": {
-#         "price_change": 5.75,
-#         "price_change_percent": 3.77
-#     }
-# }
-
+    
     return {
-        "symbol":data.symbol,
+        "symbol": data.symbol,
         "current_price": last_price_in_window,
         "predicted_price": predicted_next_price
     }
-

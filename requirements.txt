@@ -1,8 +1,17 @@
+# fastapi==0.116.1
+# uvicorn==0.35.0
+# python-dotenv==1.1.1
+# boto3==1.39.14
+# yfinance==0.2.65
+# tensorflow-cpu==2.19.0
+# pandas==2.2.2
+# numpy==1.26.4
+
 fastapi==0.116.1
 uvicorn==0.35.0
 python-dotenv==1.1.1
 boto3==1.39.14
 yfinance==0.2.65
-tensorflow-cpu==2.19.0
+tflite-runtime==2.19.0   # tiny inference runtime
 pandas==2.2.2
 numpy==1.26.4
