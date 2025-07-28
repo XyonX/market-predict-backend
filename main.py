@@ -51,22 +51,49 @@ def download_model(symbol: str):
             )
     return model_path
 
+# def download_data(symbol: str):
+#     window_size = 20
+#     end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+#     start_date = (pd.Timestamp.now() - pd.Timedelta(days=window_size + 10)).strftime('%Y-%m-%d')
+    
+#     try:
+#         data = yf.download(symbol, start=start_date, end=end_date)
+        
+#         if len(data) < window_size:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail=f"Insufficient data for {symbol}. Only {len(data)} days available."
+#             )
+            
+#         closes = data['Close'].tail(window_size + 1).tolist()
+#         return closes[:-1]  # Exclude today's price
+    
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Data download failed: {str(e)}"
+#         )
+
 def download_data(symbol: str):
     window_size = 20
+    # Set start date to 100 days ago to ensure enough trading days
     end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-    start_date = (pd.Timestamp.now() - pd.Timedelta(days=window_size + 10)).strftime('%Y-%m-%d')
+    start_date = (pd.Timestamp.now() - pd.Timedelta(days=100)).strftime('%Y-%m-%d')
     
     try:
+        # Download data using yfinance
         data = yf.download(symbol, start=start_date, end=end_date)
         
+        # Check if enough data is available
         if len(data) < window_size:
             raise HTTPException(
                 status_code=400,
                 detail=f"Insufficient data for {symbol}. Only {len(data)} days available."
             )
-            
-        closes = data['Close'].tail(window_size + 1).tolist()
-        return closes[:-1]  # Exclude today's price
+        
+        # Return the last 20 closing prices
+        closes = data['Close'].tail(window_size).tolist()
+        return closes
     
     except Exception as e:
         raise HTTPException(
