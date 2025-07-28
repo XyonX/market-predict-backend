@@ -93,7 +93,7 @@ def download_data(symbol: str):
         
         # Return the last 20 closing prices
         
-        closes = data ['Close'][ticker].tail(window_size).tolist()
+        closes = data ['Close'][symbol].tail(window_size).tolist()
         return closes
     
     except Exception as e:
