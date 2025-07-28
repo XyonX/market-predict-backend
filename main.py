@@ -36,6 +36,7 @@ class StockRequest(BaseModel):
     symbol: str
 
 def download_model(symbol: str):
+    symbol = symbol.lower()
     model_path = f"model_cache/{symbol}.tflite"
     os.makedirs("model_cache", exist_ok=True)
     
