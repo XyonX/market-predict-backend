@@ -74,76 +74,32 @@ def download_model(symbol: str):
 #             detail=f"Data download failed: {str(e)}"
 #         )
 
-# def download_data(symbol: str):
-#     window_size = 20
-#     # Set start date to 100 days ago to ensure enough trading days
-#     end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-#     start_date = (pd.Timestamp.now() - pd.Timedelta(days=100)).strftime('%Y-%m-%d')
+def download_data(symbol: str):
+    window_size = 20
+    # Set start date to 100 days ago to ensure enough trading days
+    end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+    start_date = (pd.Timestamp.now() - pd.Timedelta(days=100)).strftime('%Y-%m-%d')
     
-#     try:
-#         # Download data using yfinance
-#         data = yf.download(symbol, start=start_date, end=end_date)
-        
-#         # Check if enough data is available
-#         if len(data) < window_size:
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail=f"Insufficient data for {symbol}. Only {len(data)} days available."
-#             )
-        
-#         # Return the last 20 closing prices
-#         closes = data['Close'].tail(window_size).tolist()
-#         return closes
-    
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Data download failed: {str(e)}"
-#         )
-
-def download_data(ticker : str):
-
-    window_size = 20 # This should match the window_size used during training
-
-    end_date_inference = pd.Timestamp.now().strftime('%Y-%m-%d')
-    start_date_inference = (pd.Timestamp.now() - pd.Timedelta(days=window_size + 20)).strftime('%Y-%m-%d') # Fetch a few extra days
     try:
-        # Fetch the data
-        inference_data = yf.download(ticker, start=start_date_inference, end=end_date_inference)
-
-        # Access the Close prices and get the last 'window_size' values
-        # Ensure there are enough data points
-        if len(inference_data['Close']) < window_size:
-            print(f"Not enough data points ({len(inference_data)}) to form a window of size {window_size}.")
-            # Exit or handle the error
-            exit()
-
-        # Get the last 'window_size' closing prices
-        raw_inference_window = inference_data['Close'][ticker].tail(window_size).tolist()
-        # raw_inference_window = raw_inference_window[:-1]
-        # Get the 20 closing prices ending **yesterday**, not today
-        # raw_inference_window = inference_data['Close'][ticker].iloc[-(window_size + 1):-1].tolist()
-        # raw_inference_window = inference_data['Close'][ticker].iloc[-window_size-1:-1].tolist()
-
-        # Prepare the inference data in the same format as your training data (normalized)
-        # Apply the same normalization logic as in your make_dataset function
-        if raw_inference_window: # Check if the list is not empty
-            first_price = raw_inference_window[0]
-            inference_window_normalized = [p / first_price for p in raw_inference_window]
-        else:
-            print("Could not get enough data to create an inference window.")
-            exit()
-
-        return raw_inference_window
-        # Convert the normalized window to a NumPy array and reshape for the model
-        # The model expects an input shape like (batch_size, window_size).
-        # For a single prediction, batch_size is 1.
-        # inference_input = np.array(inference_window_normalized).reshape(1, window_size)
-        # return inference_input
-
+        # Download data using yfinance
+        data = yf.download(symbol, start=start_date, end=end_date)
+        
+        # Check if enough data is available
+        if len(data) < window_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient data for {symbol}. Only {len(data)} days available."
+            )
+        
+        # Return the last 20 closing prices
+        closes = data['Close'].tail(window_size).tolist()
+        return closes
+    
     except Exception as e:
-        print(f"Error during data fetching or prediction: {e}")
-
+        raise HTTPException(
+            status_code=500,
+            detail=f"Data download failed: {str(e)}"
+        )
 
 @app.post("/predict")
 def predict(request: StockRequest):
