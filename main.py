@@ -75,6 +75,8 @@ def download_model(symbol: str):
 #         )
 
 def download_data(symbol: str):
+    # Normalize symbol to uppercase
+    symbol = symbol.upper()
     window_size = 20
     # Set start date to 100 days ago to ensure enough trading days
     end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
