@@ -8,8 +8,24 @@ import pandas as pd
 import yfinance as yf
 import tflite_runtime.interpreter as tflite
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:3000",  # Local Next.js dev server
+    "http://localhost:5173",  # (if you use Vite or other ports)
+    "https://stock-market-predict.vercel.app",  # Your deployed frontend
+    # Add any other origins you want to allow
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # or ["*"] to allow all, but not recommended for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
